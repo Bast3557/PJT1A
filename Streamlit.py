@@ -252,14 +252,11 @@ if skill_choice == "Accueil":
 # SECTION A2 : QUESTIONNAIRE
 # ==========================================
 
-    
 elif skill_choice == "Questionnaire":
     st.markdown("<h1 style='text-align: center;'>Quelle technique d'apprentissage automatique choisir ?</h1>", unsafe_allow_html=True)
 
     st.write("") # Petit espace
-    st.markdown("""
-    Quelles techniques d'apprentissages automatiques ai-je à ma disposition ?
-    """)
+    st.markdown(""" Quelles techniques d'apprentissages automatiques ai-je à ma disposition ?""")
     st.markdown("""
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Notre site propose 3 catégories de techniques: 
         """)
@@ -302,16 +299,9 @@ elif skill_choice == "Questionnaire":
     on prévoit le moment exact où elle aura besoin d'une révision.
     """)
 
-    st.warning("""
-        **Attention**
-               \nLes modèles mis à disposition ne traient que fichiers csv, txt et les images png, jpg, jpeg
-               """)
-    
+    st.warning("""**Attention** : Les modèles mis à disposition ne traitent que les fichiers .csv, .txt et les images .png, .jpg, .jpeg""")
 
     st.markdown("<h1 style='text-align: center;'>Questionnaire :</h1>", unsafe_allow_html=True)
-
-
-
     st.info("Veuillez répondre aux questions ci-dessous pour déterminer la méthode adaptée à votre problème.")
 
     # --- ÉTAPE 1 : FORMAT ---
@@ -331,17 +321,13 @@ elif skill_choice == "Questionnaire":
             possede_base = st.radio("Sélectionnez votre réponse :", ["Oui", "Non"], index=None, key="q_img")
 
             if possede_base == "Oui":
-                st.success("**Recommandation : Analyse défaut image**")
+                st.success("**Recommandation : Analyse défaut image (Isolation Forest)**")
                 def aller_B1():
-                        st.session_state.page = "Analyse défaut image"
-                        st.session_state.a = " "
-                        st.session_state.b = "Analyse défaut image"
-                        st.session_state.c = " "
-                        st.session_state.d = " "
-                st.button("**Utiliser Analyse défaut image (Isolation Forest)**", on_click=aller_B1, use_container_width=True)
-
+                    st.session_state.page = "Analyse défaut image"
+                    st.session_state.a, st.session_state.b, st.session_state.c, st.session_state.d = " ", "Analyse défaut image", " ", " "
+                st.button("**Utiliser Analyse défaut image**", on_click=aller_B1, key="btn_iso_img", use_container_width=True)
             elif possede_base == "Non":
-                st.warning("Vous devez d'abord constituer un échantillon.")
+                st.warning("Vous devez d'abord constituer un échantillon d'images.")
                 st.link_button("Chercher sur Kaggle", "https://www.kaggle.com/")
 
         else:
@@ -359,61 +345,60 @@ elif skill_choice == "Questionnaire":
             if but:
                 st.markdown("---")
     
-                # Cas 2 : Groupement (Clustering)
+                # --- CAS CLUSTERING ---
                 if "Grouper" in but:
-                    choix_cluster = st.radio("Connaissez-vous le nombre de groupes à l'avance ?", ["Oui", "Non"], index=None)
+                    choix_cluster = st.radio("Connaissez-vous le nombre de groupes à l'avance ?", ["Oui", "Non"], index=None, key="q_clust")
                     if choix_cluster == "Oui":
                         st.success("**Recommandation : K-means**")
                         def aller_C1():
                             st.session_state.page = "K-means"
-                            st.session_state.a = " "
-                            st.session_state.b = " "
-                            st.session_state.c = "K-means"
-                            st.session_state.d = " "
-                        st.button("**Utiliser K-means**", on_click=aller_C1, use_container_width=True)
-
+                            st.session_state.a, st.session_state.b, st.session_state.c, st.session_state.d = " ", " ", "K-means", " "
+                        st.button("**Utiliser K-means**", on_click=aller_C1, key="btn_km", use_container_width=True)
                     elif choix_cluster == "Non":
                         st.success("**Recommandation : DBSCAN**")
                         def aller_B3():
                             st.session_state.page = "DBSCAN"
-                            st.session_state.a = " "
-                            st.session_state.b = "DBSCAN"
-                            st.session_state.c = " "
-                            st.session_state.d = " "
-                        st.button("**Utiliser DBSCAN**", on_click=aller_B3, use_container_width=True)
+                            st.session_state.a, st.session_state.b, st.session_state.c, st.session_state.d = " ", "DBSCAN", " ", " "
+                        st.button("**Utiliser DBSCAN**", on_click=aller_B3, key="btn_db", use_container_width=True)
 
-                # Cas 3 : Classification
+                # --- CAS CLASSIFICATION (Ajout du SVM ici) ---
                 elif "Classer" in but:
-                    st.success("**Recommandation : KNN ou Régression Logistique**")
-                    col_c1, col_c2 = st.columns(2)
+                    st.success("**Recommandation : Plusieurs outils sont adaptés à la classification**")
+                    st.write("Choisissez la méthode selon la complexité de vos données :")
+                    
+                    col_c1, col_c2, col_c3 = st.columns(3)
+                    
                     with col_c1:
+                        st.info("**Voisinage**")
                         def aller_D1():
                             st.session_state.page = " Méthode KNN"
+                            st.session_state.a, st.session_state.b, st.session_state.c, st.session_state.d = " ", " ", " ", " Méthode KNN"
+                        st.button("**Utiliser KNN**", on_click=aller_D1, key="btn_knn", use_container_width=True)
+                            
+                    with col_c2:
+                        st.info("**Binaire (Oui/Non)**")
+                        def aller_D5():
+                            st.session_state.page = "Régression logistique"
+                            st.session_state.a, st.session_state.b, st.session_state.c, st.session_state.d = " ", " ", " ", "Régression logistique"
+                        st.button("**Logistique**", on_click=aller_D5, key="btn_log", use_container_width=True)
+
+                    with col_c3:
+                        st.info("**Classification non binaire**")
+                        def aller_C3():
+                            st.session_state.page = "SVM"
                             st.session_state.a = " "
                             st.session_state.b = " "
                             st.session_state.c = " "
-                            st.session_state.d = " Méthode KNN"
-                        st.button("**Utiliser KNN**", on_click=aller_D1, use_container_width=True)
-                            
-                    with col_c2:
-                        def aller_D5():
-                                    st.session_state.page = "Régression logistique"
-                                    st.session_state.a = " "
-                                    st.session_state.b = " "
-                                    st.session_state.c = " "
-                                    st.session_state.d = "Régression logistique"
-                        st.button("**Utiliser la régression logistique**", on_click=aller_D5, use_container_width=True)
+                            st.session_state.d = "SVM"
+                        st.button("**Utiliser SVM**", on_click=aller_C3, key="btn_svm", use_container_width=True)
 
-                # Cas 4 : Prédiction numérique
+                # --- CAS PRÉDICTION ---
                 elif "Prédire" in but:
                     st.success("**Recommandation : Régression Linéaire**")
                     def aller_D3():
-                                    st.session_state.page = "Régression linéaire"
-                                    st.session_state.a = " "
-                                    st.session_state.b = " "
-                                    st.session_state.c = " "
-                                    st.session_state.d = "Régression linéaire"
-                    st.button("**Utiliser la régression linéaire**", on_click=aller_D3, use_container_width=True)
+                        st.session_state.page = "Régression linéaire"
+                        st.session_state.a, st.session_state.b, st.session_state.c, st.session_state.d = " ", " ", " ", "Régression linéaire"
+                    st.button("**Utiliser la régression linéaire**", on_click=aller_D3, key="btn_lin", use_container_width=True)
 
 # ==========================================
 # SECTION B1 : ISOLATION FOREST (Analyse défaut image)
@@ -1171,4 +1156,3 @@ elif skill_choice == "Régression logistique":
                 st.error(f"**ALERTE : {resultat}** (Confiance : {confiance:.1%})")
             else:
                 st.success(f"**CONFORME : {resultat}** (Confiance : {confiance:.1%})")
-

@@ -11,7 +11,9 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.metrics import accuracy_score, classification_report
-
+from sklearn import svm
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
 
 
 #   CONFIGURATION DE LA PAGE  
@@ -743,54 +745,77 @@ elif skill_choice == "SVM":
 
     st.write("Le SVM (Machine à Vecteurs de Support) est idéal pour classer des données complexes en cherchant la meilleure séparation possible entre les catégories.")
 
-    # 1. Upload du fichier
-    uploaded_file = st.file_uploader("Choisissez votre fichier CSV", type="csv")
-    
-    if uploaded_file is not None:
-        df_origin = pd.read_csv(uploaded_file)
-        st.write("### Aperçu des données", df_origin.head())
+    # --- 1. ENTRAÎNEMENT (HISTORIQUE) ---
+    st.subheader("Étape 1 : Apprentissage (Historique)")
+    file_hist = st.file_uploader("Charger 'controle_qualite.csv'", type="csv", key="hist")
 
-        # 2. Choix de la colonne cible (ce qu'on veut prédire)
-        target_col = st.selectbox("Quelle colonne contient la catégorie à prédire ?", df_origin.columns)
+    if file_hist:
+        df_hist = pd.read_csv(file_hist)
+        target_col = st.selectbox("Quelle colonne contient le résultat réel ?", df_hist.columns)
+        
+        if st.button("Lancer l'apprentissage"):
+            with st.spinner("L'IA apprend des données passées..."):
+                X_train = df_hist.drop(columns=[target_col])
+                # Conversion automatique du texte en nombres pour les variables explicatives
+                X_train = pd.get_dummies(X_train)
+                y_train = df_hist[target_col]
 
-        if st.button("Lancer l'analyse SVM"):
-            with st.spinner('Entraînement de l\'IA en cours...'):
-                try:
-                    # Préparation des données
-                    X = df_origin.drop(columns=[target_col])
-                    y = df_origin[target_col]
+                model_pipeline = Pipeline([
+                    ('scaler', StandardScaler()),
+                    ('svm', svm.SVC(kernel='rbf', C=1.0, probability=True))
+                ])
+                
+                model_pipeline.fit(X_train, y_train)
+                st.session_state['svm_model'] = model_pipeline
+                st.session_state['svm_columns'] = X_train.columns # On garde les colonnes pour aligner le futur CSV
+                st.success("Apprentissage terminé avec succès.")
 
-                    # Création du Pipeline (Standardisation + Modèle)
-                    from sklearn.pipeline import Pipeline
-                    from sklearn.preprocessing import StandardScaler
-                    from sklearn import svm
+    # --- 2. PRÉDICTION (ARRIVAGE) ---
+    if 'svm_model' in st.session_state:
+        st.divider()
+        st.subheader(" Étape 2 : Tri des nouvelles données")
+        file_new = st.file_uploader("Charger 'ARRIVAGE_A_TRIER.csv'", type="csv", key="new")
 
-                    model_pipeline = Pipeline([
-                        ('scaler', StandardScaler()),
-                        ('svm', svm.SVC(kernel='rbf', C=1.0, probability=True))
-                    ])
+        if file_new:
+            df_new = pd.read_csv(file_new)
+            
+            if st.button("Lancer le tri automatique"):
+                # Préparation du nouveau CSV (Encoding identique à l'historique)
+                X_new = pd.get_dummies(df_new)
+                
+                # S'assurer que les colonnes sont identiques (alignement)
+                X_new = X_new.reindex(columns=st.session_state['svm_columns'], fill_value=0)
 
-                    # Entraînement
-                    model_pipeline.fit(X, y)
+                # Prédictions
+                preds = st.session_state['svm_model'].predict(X_new)
+                probs = st.session_state['svm_model'].predict_proba(X_new)
+                confiance = np.max(probs, axis=1)
 
-                    # Prédictions
-                    df_origin['Prediction_IA'] = model_pipeline.predict(X)
+                df_new['Prediction_IA'] = preds
+                df_new['Confiance_IA'] = confiance
+
+                # --- 3. AFFICHAGE AVEC ALERTES ---
+                st.write("### Rapport de tri en temps réel")
+                
+                # On crée une liste pour afficher les alertes proprement
+                for i, row in df_new.iterrows():
+                    col1, col2, col3, col4 = st.columns([1, 2, 2, 4])
                     
-                    # Calcul de la confiance
-                    probs = model_pipeline.predict_proba(X)
-                    df_origin['Confiance_IA (%)'] = (np.max(probs, axis=1) * 100).round(2)
+                    with col1:
+                        st.write(f"#{i+1}")
+                    with col2:
+                        st.write(f"**{row['Prediction_IA']}**")
+                    with col3:
+                        st.write(f"{row['Confiance_IA']:.2%}")
+                    with col4:
+                        if row['Confiance_IA'] < 0.60:
+                            st.error("INSPECTION MANUELLE")
+                        else:
+                            st.success("Validation Automatique")
 
-                    # Affichage des résultats
-                    st.success("Analyse terminée !")
-                    st.write("### Résultats de la classification", df_origin)
-
-                    # Bouton de téléchargement du résultat
-                    csv = df_origin.to_csv(index=False).encode('utf-8')
-                    st.download_button("Télécharger les résultats (CSV)", csv, "resultats_svm.csv", "text/csv")
-
-                except Exception as e:
-                    st.error(f"Erreur lors du traitement : {e}")
-                    st.info("Vérifiez que vos colonnes de données ne contiennent que des chiffres (sauf la colonne cible).")
+                # Bouton de téléchargement
+                csv = df_new.to_csv(index=False).encode('utf-8')
+                st.download_button("💾 Télécharger le RAPPORT_FINAL_TRI.csv", csv, "RAPPORT_FINAL_TRI.csv", "text/csv")
 
 # ==========================================
 # SECTION D1 :  Méthode KNN (KNN)
@@ -1156,3 +1181,4 @@ elif skill_choice == "Régression logistique":
                 st.error(f"**ALERTE : {resultat}** (Confiance : {confiance:.1%})")
             else:
                 st.success(f"**CONFORME : {resultat}** (Confiance : {confiance:.1%})")
+

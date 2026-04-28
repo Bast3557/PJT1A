@@ -80,7 +80,7 @@ st.sidebar.selectbox(
 # SECTION C
 st.sidebar.write("**Classification**")
 st.sidebar.selectbox(
-    "C", [" ", "K-means", "- Fiche : K-means"], 
+    "C", [" ", "K-means", "- Fiche : K-means", "SVM", "- Fiche : SVM"], 
     key="c", 
     on_change=reset_others, 
     args=("c",),
@@ -211,11 +211,19 @@ if skill_choice == "Accueil":
                 file_name="CV_Thibault_Brel.pdf",
                 mime="image/pdf",
                 use_container_width=True
-        )
+            )
     with col5:
         st.write("CHEVRIER Héloïse")
         st.write("Développeuse")
         st.image("CV5.jpg", use_container_width=True)
+        with open("CV5.pdf", "rb") as file:
+            btn = st.download_button(
+                label="Télécharger CV pdf",
+                data=file,
+                file_name="CV_Héloïse_Chevrier.pdf",
+                mime="image/pdf",
+                use_container_width=True
+            )
 
     with col6:
         st.write("Manohisoa RAZDA")
@@ -433,10 +441,10 @@ elif skill_choice == "Analyse défaut image":
             st.session_state.c = " "
             st.session_state.d = " "
     st.button("**Comment fonctionne cette technique ?**", on_click=aller_fiche_B1, use_container_width=True)
-    
+    RESOLUTION = 160
     with st.expander("Hyperparamètres"):
         contamination = st.slider("Seuil de sensibilité (Contamination)", 0.01, 0.20, 0.10)
-        resolution = st.select_slider("Résolution d'analyse", options=[80, 160, 320], value=160)
+        st.info(f"Résolution d'analyse fixée à {RESOLUTION}x{RESOLUTION} pour garantir la stabilité.")
 
     train_files = st.file_uploader("1. Charger les images BONNES pour l'entraînement",
                                    type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
@@ -448,28 +456,34 @@ elif skill_choice == "Analyse défaut image":
             with st.spinner("Entraînement en cours..."):
                 features = []
                 for file in train_files:
-                    img = Image.open(file).convert('L').resize((resolution, resolution))
+                    # Utilisation de la résolution fixe
+                    img = Image.open(file).convert('L').resize((RESOLUTION, RESOLUTION))
                     fd = hog(np.array(img), orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2))
                     features.append(fd)
 
                 model = IsolationForest(contamination=contamination, random_state=42)
                 model.fit(np.array(features))
+                
+                # On stocke le modèle dans le session_state
                 st.session_state['model'] = model
-                st.success("Modèle entraînée avec succès !")
+                st.success("Modèle entraîné avec succès !")
 
     test_files = st.file_uploader("3. Charger les images à tester",
                                   type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
 
     if st.button("4. Lancer l'analyse"):
         if 'model' not in st.session_state:
-            st.error("Le modèle n'est pas encore entraînée. Veuillez faire l'étape 2.")
+            st.error("Le modèle n'est pas encore entraîné. Veuillez faire l'étape 2.")
         elif not test_files:
             st.error("Veuillez d'abord uploader des images à tester.")
         else:
             cols = st.columns(4)
             for idx, file in enumerate(test_files):
-                img = Image.open(file).convert('L').resize((resolution, resolution))
+                # Utilisation de la même résolution fixe pour le test
+                img = Image.open(file).convert('L').resize((RESOLUTION, RESOLUTION))
                 fd = hog(np.array(img), orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2))
+                
+                # Prédiction
                 score = st.session_state['model'].decision_function([fd])[0]
                 prediction = st.session_state['model'].predict([fd])[0]
 
@@ -716,6 +730,82 @@ elif skill_choice == "K-means":
     else:
         st.info("En attente d'un fichier CSV pour commencer.")
 
+# ==========================================
+# SECTION C3 : SVM
+# ==========================================
+
+#Fiche associée:
+elif skill_choice == "- Fiche : SVM":
+    st.markdown("<h1 style='text-align: center;'>SVM</h1>", unsafe_allow_html=True)
+    st.image("Fiche_C3.png", caption="Fiche explicative : SVM", use_container_width=True)
+    def aller_C3():
+            st.session_state.page = "SVM"
+            st.session_state.a = " "
+            st.session_state.b = " "
+            st.session_state.c = "SVM"
+            st.session_state.d = " "
+    st.button("**Utiliser cette technique**", on_click=aller_C3, use_container_width=True)
+    
+elif skill_choice == "SVM": 
+    st.markdown("<h1 style='text-align: center;'>SVM (Support Vector Machine)</h1>", unsafe_allow_html=True)
+    def aller_fiche_C3():
+            st.session_state.page = "- Fiche : SVM"
+            st.session_state.a = " "
+            st.session_state.b = " "
+            st.session_state.c = "- Fiche : SVM"
+            st.session_state.d = " "
+    st.button("**Comment fonctionne cette technique ?**", on_click=aller_fiche_C3, use_container_width=True)
+
+    st.write("Le SVM (Machine à Vecteurs de Support) est idéal pour classer des données complexes en cherchant la meilleure séparation possible entre les catégories.")
+
+    # 1. Upload du fichier
+    uploaded_file = st.file_uploader("Choisissez votre fichier CSV", type="csv")
+    
+    if uploaded_file is not None:
+        df_origin = pd.read_csv(uploaded_file)
+        st.write("### Aperçu des données", df_origin.head())
+
+        # 2. Choix de la colonne cible (ce qu'on veut prédire)
+        target_col = st.selectbox("Quelle colonne contient la catégorie à prédire ?", df_origin.columns)
+
+        if st.button("Lancer l'analyse SVM"):
+            with st.spinner('Entraînement de l\'IA en cours...'):
+                try:
+                    # Préparation des données
+                    X = df_origin.drop(columns=[target_col])
+                    y = df_origin[target_col]
+
+                    # Création du Pipeline (Standardisation + Modèle)
+                    from sklearn.pipeline import Pipeline
+                    from sklearn.preprocessing import StandardScaler
+                    from sklearn import svm
+
+                    model_pipeline = Pipeline([
+                        ('scaler', StandardScaler()),
+                        ('svm', svm.SVC(kernel='rbf', C=1.0, probability=True))
+                    ])
+
+                    # Entraînement
+                    model_pipeline.fit(X, y)
+
+                    # Prédictions
+                    df_origin['Prediction_IA'] = model_pipeline.predict(X)
+                    
+                    # Calcul de la confiance
+                    probs = model_pipeline.predict_proba(X)
+                    df_origin['Confiance_IA (%)'] = (np.max(probs, axis=1) * 100).round(2)
+
+                    # Affichage des résultats
+                    st.success("Analyse terminée !")
+                    st.write("### Résultats de la classification", df_origin)
+
+                    # Bouton de téléchargement du résultat
+                    csv = df_origin.to_csv(index=False).encode('utf-8')
+                    st.download_button("Télécharger les résultats (CSV)", csv, "resultats_svm.csv", "text/csv")
+
+                except Exception as e:
+                    st.error(f"Erreur lors du traitement : {e}")
+                    st.info("Vérifiez que vos colonnes de données ne contiennent que des chiffres (sauf la colonne cible).")
 
 # ==========================================
 # SECTION D1 :  Méthode KNN (KNN)

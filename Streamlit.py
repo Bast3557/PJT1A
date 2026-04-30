@@ -747,7 +747,7 @@ elif skill_choice == "SVM":
 
     # --- 1. ENTRAÎNEMENT (HISTORIQUE) ---
     st.subheader("Étape 1 : Apprentissage (Historique)")
-    file_hist = st.file_uploader("Charger 'controle_qualite.csv'", type="csv", key="hist")
+    file_hist = st.file_uploader("Charger le fichier csv", type="csv", key="hist")
 
     if file_hist:
         df_hist = pd.read_csv(file_hist)

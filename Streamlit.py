@@ -11,7 +11,9 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.metrics import accuracy_score, classification_report
-
+from sklearn import svm
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
 
 
 #   CONFIGURATION DE LA PAGE  
@@ -54,6 +56,7 @@ def reset_others(current_key):
     if st.session_state[current_key] != " ":
         st.session_state.page = st.session_state[current_key]
 #   SIDEBAR  
+st.sidebar.markdown("### AI SKILLS")
 st.sidebar.markdown("### Menu Principal")
 
 # SECTION A
@@ -79,7 +82,7 @@ st.sidebar.selectbox(
 # SECTION C
 st.sidebar.write("**Classification**")
 st.sidebar.selectbox(
-    "C", [" ", "K-means", "- Fiche : K-means"], 
+    "C", [" ", "K-means", "- Fiche : K-means", "SVM", "- Fiche : SVM"], 
     key="c", 
     on_change=reset_others, 
     args=("c",),
@@ -89,7 +92,7 @@ st.sidebar.selectbox(
 # SECTION D
 st.sidebar.write("**Prédiction**")
 st.sidebar.selectbox(
-    "D", [" ", " Méthode KNN", "- Fiche méthode KNN", "Régression linéaire", "Régression logistique"], 
+    "D", [" ", " Méthode KNN", "- Fiche méthode KNN", "Régression linéaire", "- Fiche régression linéaire", "Régression logistique", "- Fiche régression logistique"], 
     key="d", 
     on_change=reset_others, 
     args=("d",),
@@ -120,7 +123,7 @@ if skill_choice == "Accueil":
         st.write("") # Petit espace
 
         st.markdown("""
-            <h3 style="margin-left: 20px;">IA Skills c'est :</h3>""", unsafe_allow_html=True)
+            <h3 style="margin-left: 20px;">AI Skills c'est :</h3>""", unsafe_allow_html=True)
         
         # Utilisation de symboles pour reproduire les flèches de l'image
         st.markdown("""
@@ -134,7 +137,7 @@ if skill_choice == "Accueil":
 
         st.markdown("""
     <div style='text-align: center;'>
-        <em>Les détails du fonctionnement de chaque méthode d'apprentissage automatisé sont disponibles en bas de chaque 
+        <em>Les détails du fonctionnement de chaque méthode d'apprentissage automatisé sont disponibles en haut de chaque 
         interface, et les méthodes sont directement utilisables depuis l’interface.</em>
     </div>
     """, unsafe_allow_html=True) 
@@ -144,7 +147,7 @@ if skill_choice == "Accueil":
         st.warning("""
         **Note sur la terminologie :** Dans ce projet, nous privilégions le terme **Apprentissage Automatisé** (Machine Learning) plutôt qu'Intelligence Artificielle.  
     
-        *Pourquoi ?* Contrairement à l'idée d'une machine "pensante", nos outils reposent sur des modèles mathématiques qui apprennent à reconnaître des motifs (patterns) à partir de vos données historiques pour automatiser des décisions techniques.
+        *Pourquoi ?* Contrairement à l'idée d'une machine "pensante" (ChatGPT), nos outils reposent sur des modèles mathématiques qui apprennent à reconnaître des motifs (patterns) à partir de vos données pour automatiser des décisions dans le domaine de l'industrie.
         """)
         
         st.write("") # Petit espace
@@ -210,11 +213,19 @@ if skill_choice == "Accueil":
                 file_name="CV_Thibault_Brel.pdf",
                 mime="image/pdf",
                 use_container_width=True
-        )
+            )
     with col5:
         st.write("CHEVRIER Héloïse")
         st.write("Développeuse")
         st.image("CV5.jpg", use_container_width=True)
+        with open("CV5.pdf", "rb") as file:
+            btn = st.download_button(
+                label="Télécharger CV pdf",
+                data=file,
+                file_name="CV_Héloïse_Chevrier.pdf",
+                mime="image/pdf",
+                use_container_width=True
+            )
 
     with col6:
         st.write("Manohisoa RAZDA")
@@ -243,14 +254,11 @@ if skill_choice == "Accueil":
 # SECTION A2 : QUESTIONNAIRE
 # ==========================================
 
-    
 elif skill_choice == "Questionnaire":
     st.markdown("<h1 style='text-align: center;'>Quelle technique d'apprentissage automatique choisir ?</h1>", unsafe_allow_html=True)
 
     st.write("") # Petit espace
-    st.markdown("""
-    Quelles techniques d'apprentissages automatiques ai-je à ma disposition ?
-    """)
+    st.markdown(""" Quelles techniques d'apprentissages automatiques ai-je à ma disposition ?""")
     st.markdown("""
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Notre site propose 3 catégories de techniques: 
         """)
@@ -293,92 +301,106 @@ elif skill_choice == "Questionnaire":
     on prévoit le moment exact où elle aura besoin d'une révision.
     """)
 
-    st.warning("""
-        **Attention**
-               \nLes modèles mis à disposition ne traient que fichiers csv, txt et les images png, jpg, jpeg
-               """)
-    
+    st.warning("""**Attention** : Les modèles mis à disposition ne traitent que les fichiers .csv, .txt et les images .png, .jpg, .jpeg""")
 
     st.markdown("<h1 style='text-align: center;'>Questionnaire :</h1>", unsafe_allow_html=True)
-
-
-
     st.info("Veuillez répondre aux questions ci-dessous pour déterminer la méthode adaptée à votre problème.")
 
-    # --- ÉTAPE 1 ---
+    # --- ÉTAPE 1 : FORMAT ---
     st.markdown("### 1. Quel est le format de vos données ?")
     format_data = st.radio(
         "Sélectionnez le type de support :",
         ["Des images (photos de pièces, captures caméra)", 
          "Un tableau de données (chiffres, texte, fichier CSV)"],
-        index=None, 
-        key="q1"
+        index=None, key="q1"
     )
 
-    # On n'affiche la suite que si l'étape 1 est répondue
     if format_data:
         if "images" in format_data:
-            # --- NOUVELLE QUESTION : BASE DE DONNÉES ---
+            # --- LOGIQUE IMAGES ---
             st.markdown("---")
             st.markdown("### 2. Possédez-vous une base de données d'images ?")
-            
-            possede_base = st.radio(
-                "Sélectionnez votre réponse",
-                ["Oui, je possède une base de donnée", "Non, je n'ai pas encore de données"],
-                index=None,
-                key="q_base_img"
-            )
+            possede_base = st.radio("Sélectionnez votre réponse :", ["Oui", "Non"], index=None, key="q_img")
 
-            if possede_base == "Oui, je possède une base de donnée":
-                st.success("**Recommandation : Observation : Analyse défaut image**")
+            if possede_base == "Oui":
+                st.success("**Recommandation : Analyse défaut image (Isolation Forest)**")
                 def aller_B1():
                     st.session_state.page = "Analyse défaut image"
-                    st.session_state.a = " "
-                    st.session_state.b = "Analyse défaut image"
-                    st.session_state.c = " "
-                    st.session_state.d = " "
-                st.button("**Utiliser : Analyse défaut image**", on_click=aller_B1, use_container_width=True)
-            
-            elif possede_base == "Non, je n'ai pas encore de données":
-                st.warning(" Pour utiliser cette technique, vous devez d'abord constituer un échantillon d'images, vous pouvez " \
-                "vous en procurer en cliquant sur le bouton ci dessous :")
-                st.link_button("Obtenir une base de donnée", "https://www.kaggle.com/")
-        
+                    st.session_state.a, st.session_state.b, st.session_state.c, st.session_state.d = " ", "Analyse défaut image", " ", " "
+                st.button("**Utiliser Analyse défaut image**", on_click=aller_B1, key="btn_iso_img", use_container_width=True)
+            elif possede_base == "Non":
+                st.warning("Vous devez d'abord constituer un échantillon d'images.")
+                st.link_button("Chercher sur Kaggle", "https://www.kaggle.com/")
+
         else:
-            # --- ÉTAPE 2 si images ---
+            # --- LOGIQUE TABLEAU (CSV/TXT) ---
             st.markdown("---")
-            st.markdown("### 2. Quel est le but final du traitement de données ?")
-            objectif = st.radio(
-                "Quel est le but final de l'analyse ?",
-                ["Classer des éléments dans des catégories (ex: Type A, Type B, Type C)", 
-                 "Prédire une valeur précise (ex: une température, une dimension, un poids)"],
-                index=None, # <--- Toujours vide au départ
-                key="q2"
+            st.markdown("### 2. Quel est l'objectif principal ?")
+            but = st.radio(
+                "Choisissez votre objectif :",
+                ["Grouper mes données automatiquement (sans étiquettes)", 
+                 "Classer mes données selon des catégories connues",
+                 "Prédire une valeur numérique (estimation)"],
+                index=None, key="q2"
             )
 
-            if objectif:
-                if "Classer" in objectif:
-                    st.success("**Recommandation : K-means : Méthode KNN)**")
-                    st.write("Le KNN va comparer vos nouvelles données aux anciennes pour décider de la catégorie.")
+            if but:
+                st.markdown("---")
+    
+                # --- CAS CLUSTERING ---
+                if "Grouper" in but:
+                    choix_cluster = st.radio("Connaissez-vous le nombre de groupes à l'avance ?", ["Oui", "Non"], index=None, key="q_clust")
+                    if choix_cluster == "Oui":
+                        st.success("**Recommandation : K-means**")
+                        def aller_C1():
+                            st.session_state.page = "K-means"
+                            st.session_state.a, st.session_state.b, st.session_state.c, st.session_state.d = " ", " ", "K-means", " "
+                        st.button("**Utiliser K-means**", on_click=aller_C1, key="btn_km", use_container_width=True)
+                    elif choix_cluster == "Non":
+                        st.success("**Recommandation : DBSCAN**")
+                        def aller_B3():
+                            st.session_state.page = "DBSCAN"
+                            st.session_state.a, st.session_state.b, st.session_state.c, st.session_state.d = " ", "DBSCAN", " ", " "
+                        st.button("**Utiliser DBSCAN**", on_click=aller_B3, key="btn_db", use_container_width=True)
+
+                # --- CAS CLASSIFICATION (Ajout du SVM ici) ---
+                elif "Classer" in but:
+                    st.success("**Recommandation : Plusieurs outils sont adaptés à la classification**")
+                    st.write("Choisissez la méthode selon la complexité de vos données :")
                     
-                    def aller_D1():
-                        st.session_state.page = " Méthode KNN"
-                        st.session_state.a = " "
-                        st.session_state.b = " "
-                        st.session_state.c = " "
-                        st.session_state.d = " Méthode KNN"
-                    st.button("**Utiliser Méthode KNN**", on_click=aller_D1, use_container_width=True)
-                else:
-                    st.success("**Recommandation : Prédiction : Méthode KNN Régression**")
-                    st.write("Le KNN va calculer une moyenne pour prédire un chiffre précis basé sur l'historique.")
+                    col_c1, col_c2, col_c3 = st.columns(3)
                     
-                    def aller_D1():
-                        st.session_state.page = " Méthode KNN"
-                        st.session_state.a = " "
-                        st.session_state.b = " "
-                        st.session_state.c = " "
-                        st.session_state.d = " Méthode KNN"
-                    st.button("**Utiliser Méthode KNN**", on_click=aller_D1, use_container_width=True)
+                    with col_c1:
+                        st.info("**Voisinage**")
+                        def aller_D1():
+                            st.session_state.page = " Méthode KNN"
+                            st.session_state.a, st.session_state.b, st.session_state.c, st.session_state.d = " ", " ", " ", " Méthode KNN"
+                        st.button("**Utiliser KNN**", on_click=aller_D1, key="btn_knn", use_container_width=True)
+                            
+                    with col_c2:
+                        st.info("**Binaire (Oui/Non)**")
+                        def aller_D5():
+                            st.session_state.page = "Régression logistique"
+                            st.session_state.a, st.session_state.b, st.session_state.c, st.session_state.d = " ", " ", " ", "Régression logistique"
+                        st.button("**Logistique**", on_click=aller_D5, key="btn_log", use_container_width=True)
+
+                    with col_c3:
+                        st.info("**Classification non binaire**")
+                        def aller_C3():
+                            st.session_state.page = "SVM"
+                            st.session_state.a = " "
+                            st.session_state.b = " "
+                            st.session_state.c = " "
+                            st.session_state.d = "SVM"
+                        st.button("**Utiliser SVM**", on_click=aller_C3, key="btn_svm", use_container_width=True)
+
+                # --- CAS PRÉDICTION ---
+                elif "Prédire" in but:
+                    st.success("**Recommandation : Régression Linéaire**")
+                    def aller_D3():
+                        st.session_state.page = "Régression linéaire"
+                        st.session_state.a, st.session_state.b, st.session_state.c, st.session_state.d = " ", " ", " ", "Régression linéaire"
+                    st.button("**Utiliser la régression linéaire**", on_click=aller_D3, key="btn_lin", use_container_width=True)
 
 # ==========================================
 # SECTION B1 : ISOLATION FOREST (Analyse défaut image)
@@ -386,6 +408,7 @@ elif skill_choice == "Questionnaire":
 #Fiche associée:
 elif skill_choice == "- Fiche : Analyse défaut image":
     st.markdown("<h1 style='text-align: center;'>Analyse défaut image</h1>", unsafe_allow_html=True)
+    st.markdown("<h5 style='text-align: center;'>ISOLATION FOREST</h5>", unsafe_allow_html=True)
     st.image("Fiche_B1.jpg", caption="Fiche explicative : Analyse défaut image", use_container_width=True)
     def aller_B1():
             st.session_state.page = "Analyse défaut image"
@@ -393,21 +416,22 @@ elif skill_choice == "- Fiche : Analyse défaut image":
             st.session_state.b = "Analyse défaut image"
             st.session_state.c = " "
             st.session_state.d = " "
-    st.button("**Utiliser cette méthode**", on_click=aller_B1, use_container_width=True)
+    st.button("**Utiliser cette technique**", on_click=aller_B1, use_container_width=True)
     
 elif skill_choice == "Analyse défaut image":
     st.markdown("<h1 style='text-align: center;'>Analyse défaut image</h1>", unsafe_allow_html=True)
+    st.markdown("<h5 style='text-align: center;'>ISOLATION FOREST</h5>", unsafe_allow_html=True)
     def aller_fiche_B1():
             st.session_state.page = "- Fiche : Analyse défaut image"
             st.session_state.a = " "
             st.session_state.b = "- Fiche : Analyse défaut image"
             st.session_state.c = " "
             st.session_state.d = " "
-    st.button("**Comment fonctionne méthode ?**", on_click=aller_fiche_B1, use_container_width=True)
-    
-    with st.expander("Réglages avancés"):
+    st.button("**Comment fonctionne cette technique ?**", on_click=aller_fiche_B1, use_container_width=True)
+    RESOLUTION = 160
+    with st.expander("Hyperparamètres"):
         contamination = st.slider("Seuil de sensibilité (Contamination)", 0.01, 0.20, 0.10)
-        resolution = st.select_slider("Résolution d'analyse", options=[80, 160, 320], value=160)
+        st.info(f"Résolution d'analyse fixée à {RESOLUTION}x{RESOLUTION} pour garantir la stabilité.")
 
     train_files = st.file_uploader("1. Charger les images BONNES pour l'entraînement",
                                    type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
@@ -419,28 +443,34 @@ elif skill_choice == "Analyse défaut image":
             with st.spinner("Entraînement en cours..."):
                 features = []
                 for file in train_files:
-                    img = Image.open(file).convert('L').resize((resolution, resolution))
+                    # Utilisation de la résolution fixe
+                    img = Image.open(file).convert('L').resize((RESOLUTION, RESOLUTION))
                     fd = hog(np.array(img), orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2))
                     features.append(fd)
 
                 model = IsolationForest(contamination=contamination, random_state=42)
                 model.fit(np.array(features))
+                
+                # On stocke le modèle dans le session_state
                 st.session_state['model'] = model
-                st.success("Modèle entraînée avec succès !")
+                st.success("Modèle entraîné avec succès !")
 
     test_files = st.file_uploader("3. Charger les images à tester",
                                   type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
 
     if st.button("4. Lancer l'analyse"):
         if 'model' not in st.session_state:
-            st.error("Le modèle n'est pas encore entraînée. Veuillez faire l'étape 2.")
+            st.error("Le modèle n'est pas encore entraîné. Veuillez faire l'étape 2.")
         elif not test_files:
             st.error("Veuillez d'abord uploader des images à tester.")
         else:
             cols = st.columns(4)
             for idx, file in enumerate(test_files):
-                img = Image.open(file).convert('L').resize((resolution, resolution))
+                # Utilisation de la même résolution fixe pour le test
+                img = Image.open(file).convert('L').resize((RESOLUTION, RESOLUTION))
                 fd = hog(np.array(img), orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2))
+                
+                # Prédiction
                 score = st.session_state['model'].decision_function([fd])[0]
                 prediction = st.session_state['model'].predict([fd])[0]
 
@@ -464,21 +494,23 @@ elif skill_choice == "- Fiche : DBSCAN":
             st.session_state.b = "DBSCAN"
             st.session_state.c = " "
             st.session_state.d = " "
-    st.button("**Utiliser cette méthode**", on_click=aller_B3, use_container_width=True)
+    st.button("**Utiliser cette technique**", on_click=aller_B3, use_container_width=True)
     
 elif skill_choice == "DBSCAN": 
-    st.markdown("<h1 style='text-align: center;'>Analyse de densité (DBSCAN)</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>DBSCAN</h1>", unsafe_allow_html=True)
+    st.markdown("<h5 style='text-align: center;'>Density-Based Spatial Clustering of Applications with Noise</h5>", unsafe_allow_html=True)
+
     def aller_fiche_B3():
             st.session_state.page = "- Fiche : DBSCAN"
             st.session_state.a = " "
             st.session_state.b = "- Fiche : DBSCAN"
             st.session_state.c = " "
             st.session_state.d = " "
-    st.button("**Comment fonctionne méthode ?**", on_click=aller_fiche_B3, use_container_width=True)
+    st.button("**Comment fonctionne cette technique ?**", on_click=aller_fiche_B3, use_container_width=True)
     
     st.write("""
     L'algorithme **DBSCAN** regroupe les points situés dans des zones denses. 
-    Les points isolés sont automatiquement marqués comme **'Bruit' (-1)** : dans l'industrie, ce sont souvent vos anomalies ou pièces défectueuses.
+    Les points isolés sont automatiquement marqués comme **'Bruit' (-1)**
     """)
 
     from sklearn.cluster import DBSCAN
@@ -499,7 +531,7 @@ elif skill_choice == "DBSCAN":
             col1, col2 = st.columns([1, 2])
 
             with col1:
-                st.subheader("Réglages")
+                st.subheader("Hyperparamètres")
                 sel_x = st.selectbox("Axe X", cols_num, index=0, key="dbx")
                 sel_y = st.selectbox("Axe Y", cols_num, index=1, key="dby")
                 
@@ -563,17 +595,17 @@ elif skill_choice == "- Fiche : K-means":
             st.session_state.b = " "
             st.session_state.c = "K-means"
             st.session_state.d = " "
-    st.button("**Utiliser cette méthode**", on_click=aller_C1, use_container_width=True)
+    st.button("**Utiliser cette technique**", on_click=aller_C1, use_container_width=True)
     
 elif skill_choice == "K-means": 
-    st.header("Analyse par K-means (Clustering)")
+    st.markdown("<h1 style='text-align: center;'>K-means (Clustering)</h1>", unsafe_allow_html=True)
     def aller_fiche_C1():
             st.session_state.page = "- Fiche : K-means"
             st.session_state.a = " "
             st.session_state.b = " "
             st.session_state.c = "- Fiche : K-means"
             st.session_state.d = " "
-    st.button("**Comment fonctionne méthode ?**", on_click=aller_fiche_C1, use_container_width=True)
+    st.button("**Comment fonctionne cette technique ?**", on_click=aller_fiche_C1, use_container_width=True)
     st.write("""
     Importez vos propres données pour regrouper vos équipements ou vos produits selon leurs caractéristiques techniques.
     """)
@@ -685,6 +717,105 @@ elif skill_choice == "K-means":
     else:
         st.info("En attente d'un fichier CSV pour commencer.")
 
+# ==========================================
+# SECTION C3 : SVM
+# ==========================================
+
+#Fiche associée:
+elif skill_choice == "- Fiche : SVM":
+    st.markdown("<h1 style='text-align: center;'>SVM</h1>", unsafe_allow_html=True)
+    st.image("Fiche_C3.png", caption="Fiche explicative : SVM", use_container_width=True)
+    def aller_C3():
+            st.session_state.page = "SVM"
+            st.session_state.a = " "
+            st.session_state.b = " "
+            st.session_state.c = "SVM"
+            st.session_state.d = " "
+    st.button("**Utiliser cette technique**", on_click=aller_C3, use_container_width=True)
+    
+elif skill_choice == "SVM": 
+    st.markdown("<h1 style='text-align: center;'>SVM (Support Vector Machine)</h1>", unsafe_allow_html=True)
+    def aller_fiche_C3():
+            st.session_state.page = "- Fiche : SVM"
+            st.session_state.a = " "
+            st.session_state.b = " "
+            st.session_state.c = "- Fiche : SVM"
+            st.session_state.d = " "
+    st.button("**Comment fonctionne cette technique ?**", on_click=aller_fiche_C3, use_container_width=True)
+
+    st.write("Le SVM (Machine à Vecteurs de Support) est idéal pour classer des données complexes en cherchant la meilleure séparation possible entre les catégories.")
+
+    # --- 1. ENTRAÎNEMENT (HISTORIQUE) ---
+    st.subheader("Étape 1 : Apprentissage (Historique)")
+    file_hist = st.file_uploader("Charger 'controle_qualite.csv'", type="csv", key="hist")
+
+    if file_hist:
+        df_hist = pd.read_csv(file_hist)
+        target_col = st.selectbox("Quelle colonne contient le résultat réel ?", df_hist.columns)
+        
+        if st.button("Lancer l'apprentissage"):
+            with st.spinner("L'IA apprend des données passées..."):
+                X_train = df_hist.drop(columns=[target_col])
+                # Conversion automatique du texte en nombres pour les variables explicatives
+                X_train = pd.get_dummies(X_train)
+                y_train = df_hist[target_col]
+
+                model_pipeline = Pipeline([
+                    ('scaler', StandardScaler()),
+                    ('svm', svm.SVC(kernel='rbf', C=1.0, probability=True))
+                ])
+                
+                model_pipeline.fit(X_train, y_train)
+                st.session_state['svm_model'] = model_pipeline
+                st.session_state['svm_columns'] = X_train.columns # On garde les colonnes pour aligner le futur CSV
+                st.success("Apprentissage terminé avec succès.")
+
+    # --- 2. PRÉDICTION (ARRIVAGE) ---
+    if 'svm_model' in st.session_state:
+        st.divider()
+        st.subheader(" Étape 2 : Tri des nouvelles données")
+        file_new = st.file_uploader("Charger 'ARRIVAGE_A_TRIER.csv'", type="csv", key="new")
+
+        if file_new:
+            df_new = pd.read_csv(file_new)
+            
+            if st.button("Lancer le tri automatique"):
+                # Préparation du nouveau CSV (Encoding identique à l'historique)
+                X_new = pd.get_dummies(df_new)
+                
+                # S'assurer que les colonnes sont identiques (alignement)
+                X_new = X_new.reindex(columns=st.session_state['svm_columns'], fill_value=0)
+
+                # Prédictions
+                preds = st.session_state['svm_model'].predict(X_new)
+                probs = st.session_state['svm_model'].predict_proba(X_new)
+                confiance = np.max(probs, axis=1)
+
+                df_new['Prediction_IA'] = preds
+                df_new['Confiance_IA'] = confiance
+
+                # --- 3. AFFICHAGE AVEC ALERTES ---
+                st.write("### Rapport de tri en temps réel")
+                
+                # On crée une liste pour afficher les alertes proprement
+                for i, row in df_new.iterrows():
+                    col1, col2, col3, col4 = st.columns([1, 2, 2, 4])
+                    
+                    with col1:
+                        st.write(f"#{i+1}")
+                    with col2:
+                        st.write(f"**{row['Prediction_IA']}**")
+                    with col3:
+                        st.write(f"{row['Confiance_IA']:.2%}")
+                    with col4:
+                        if row['Confiance_IA'] < 0.60:
+                            st.error("INSPECTION MANUELLE")
+                        else:
+                            st.success("Validation Automatique")
+
+                # Bouton de téléchargement
+                csv = df_new.to_csv(index=False).encode('utf-8')
+                st.download_button("💾 Télécharger le RAPPORT_FINAL_TRI.csv", csv, "RAPPORT_FINAL_TRI.csv", "text/csv")
 
 # ==========================================
 # SECTION D1 :  Méthode KNN (KNN)
@@ -694,25 +825,28 @@ elif skill_choice == "K-means":
 #Fiche associée:
 elif skill_choice == "- Fiche méthode KNN":
     st.markdown("<h1 style='text-align: center;'>KNN</h1>", unsafe_allow_html=True)
-    st.image("Fiche_C1.png", caption="Fiche explicative : KNN", use_container_width=True)
+    st.image("Fiche_D1.png", caption="Fiche explicative : KNN", use_container_width=True)
     def aller_D1():
             st.session_state.page = " Méthode KNN"
             st.session_state.a = " "
             st.session_state.b = " "
             st.session_state.c = " "
             st.session_state.d = " Méthode KNN"
-    st.button("**Utiliser cette méthode**", on_click=aller_D1, use_container_width=True)
+    st.button("**Utiliser cette technique**", on_click=aller_D1, use_container_width=True)
     
     
 elif skill_choice == " Méthode KNN":
-    st.header(" Méthode KNN")
+    
+    st.markdown("<h1 style='text-align: center;'>KNN</h1>", unsafe_allow_html=True)
+    st.markdown("<h5 style='text-align: center;'>k-Nearest Neighbours</h5>", unsafe_allow_html=True)
+
     def aller_fiche_D1():
             st.session_state.page = "- Fiche méthode KNN"
             st.session_state.a = " "
             st.session_state.b = " "
             st.session_state.c = " "
             st.session_state.d = "- Fiche méthode KNN"
-    st.button("**Comment fonctionne méthode ?**", on_click=aller_fiche_D1, use_container_width=True)
+    st.button("**Comment fonctionne cette technique ?**", on_click=aller_fiche_D1, use_container_width=True)
     #   ÉTAPE 1 : CONFIGURATION ET CHARGEMENT  
     st.subheader("1. Entraînement ou Chargement du modèle")
 
@@ -811,8 +945,27 @@ elif skill_choice == " Méthode KNN":
 # ==========================================
 # SECTION D3 : Régression linéaire
 # ==========================================
+elif skill_choice == "- Fiche régression linéaire":
+    st.markdown("<h1 style='text-align: center;'>Régression linéaire</h1>", unsafe_allow_html=True)
+    st.image("Fiche_D3.png", caption="Fiche explicative : régression linéaire", use_container_width=True)
+    def aller_D3():
+            st.session_state.page = "Régression linéaire"
+            st.session_state.a = " "
+            st.session_state.b = " "
+            st.session_state.c = " "
+            st.session_state.d = "Régression linéaire"
+    st.button("**Utiliser cette technique**", on_click=aller_D3, use_container_width=True)
+    
 elif skill_choice == "Régression linéaire":
     st.markdown("<h1 style='text-align: center;'>Régression linéaire</h1>", unsafe_allow_html=True)
+
+    def aller_fiche_D3():
+                st.session_state.page = "- Fiche régression linéaire"
+                st.session_state.a = " "
+                st.session_state.b = " "
+                st.session_state.c = " "
+                st.session_state.d = "- Fiche régression linéaire"
+    st.button("**Comment fonctionne cette technique ?**", on_click=aller_fiche_D3, use_container_width=True)
 
     # 1. Chargement du fichier CSV
     fichier_csv = st.file_uploader("Étape 1 : Importez votre fichier CSV", type=['csv'], key="u_reg_lin")
@@ -913,11 +1066,29 @@ elif skill_choice == "Régression linéaire":
 
 
 # ==========================================
-# SECTION D3 : Régression logistique
+# SECTION D5 : Régression logistique
 # ==========================================
-
+elif skill_choice == "- Fiche régression logistique":
+    st.markdown("<h1 style='text-align: center;'>Régression logistique</h1>", unsafe_allow_html=True)
+    st.image("Fiche_D5.png", caption="Fiche explicative : régression logistique", use_container_width=True)
+    def aller_D5():
+            st.session_state.page = "Régression logistique"
+            st.session_state.a = " "
+            st.session_state.b = " "
+            st.session_state.c = " "
+            st.session_state.d = "Régression logistique"
+    st.button("**Utiliser cette technique**", on_click=aller_D5, use_container_width=True)
+    
 elif skill_choice == "Régression logistique":
     st.markdown("<h1 style='text-align: center;'>Régression logistique</h1>", unsafe_allow_html=True)
+
+    def aller_fiche_D5():
+                st.session_state.page = "- Fiche régression logistique"
+                st.session_state.a = " "
+                st.session_state.b = " "
+                st.session_state.c = " "
+                st.session_state.d = "- Fiche régression logistique"
+    st.button("**Comment fonctionne cette technique ?**", on_click=aller_fiche_D5, use_container_width=True)
 
     # 1. Chargement du fichier CSV
     fichier_csv = st.file_uploader("Étape 1 : Importez votre fichier CSV", type=['csv'], key="u_reg_log")
